@@ -51,6 +51,11 @@
     background:#fff;border:1px solid var(--line);color:var(--muted);cursor:pointer;white-space:nowrap;}
   .tab.active{background:var(--navy);border-color:var(--navy);color:var(--ivory);}
 
+  .search-wrap{padding:0 16px 12px;background:var(--ivory);}
+  .search-wrap input{width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--line);
+    font-size:14px;background:#fff;color:var(--text);}
+  .search-wrap input::placeholder{color:var(--muted);}
+
   main{flex:1;padding:14px 16px 100px;}
   .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin-bottom:12px;}
   .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
@@ -60,6 +65,10 @@
   .badge.pendiente{background:var(--red-bg);color:var(--red);}
   .badge.proceso{background:var(--amber-bg);color:var(--amber);}
   .badge.resuelto{background:var(--green-bg);color:var(--green);}
+  .resp-tag{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;}
+  .resp-tag.edificio{background:#E4EEF7;color:#2E5C8A;}
+  .resp-tag.particular{background:#F2E7F5;color:#7A3E91;}
+  .resp-tag.confirmar{background:var(--amber-bg);color:var(--amber);}
   .desc{font-size:13.5px;margin-top:10px;line-height:1.4;}
   .meta{margin-top:8px;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px;}
   .prio{font-weight:700;}
@@ -144,6 +153,10 @@
     <div class="tab" data-filter="proceso">En proceso</div>
     <div class="tab" data-filter="resuelto">Resueltas</div>
     <div class="tab" data-filter="todas">Todas</div>
+  </div>
+
+  <div class="search-wrap">
+    <input type="text" id="searchUnidad" placeholder="Buscar por unidad (ej: 303)..." inputmode="numeric">
   </div>
 
   <main id="list">
@@ -311,6 +324,15 @@
         <option value="Otro">Otro</option>
       </select>
     </div>
+    <div class="field" id="respWrap" style="display:none;">
+      <label>¿De quién es la responsabilidad?</label>
+      <select id="fResp">
+        <option value="">Seleccionar…</option>
+        <option value="Edificio">Edificio</option>
+        <option value="Particular">Particular</option>
+        <option value="A confirmar">A confirmar</option>
+      </select>
+    </div>
     <button class="save-btn" id="whoConfirmBtn">Confirmar cambio</button>
     <button class="cancel-btn" id="whoCancelBtn">Cancelar</button>
   </div>
@@ -329,6 +351,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyEUcZPVsC08aoSnOn6zncR
 let items = [];
 let currentFilter = "activas";
 let selectedPrio = "Media";
+let searchQuery = "";
 
 function todayISO(){
   const d = new Date();
@@ -410,14 +433,16 @@ function render(){
   document.getElementById("sumRes").textContent = res;
 
   let filtered;
-  if(currentFilter==="todas") filtered = items.slice();
+  if(searchQuery){
+    filtered = items.filter(i => String(i.unidad).toLowerCase().includes(searchQuery));
+  } else if(currentFilter==="todas") filtered = items.slice();
   else if(currentFilter==="activas") filtered = items.filter(i=>i.estado!=="Resuelto");
   else if(currentFilter==="pendiente") filtered = items.filter(i=>i.estado==="Pendiente");
   else if(currentFilter==="proceso") filtered = items.filter(i=>i.estado==="En proceso");
   else if(currentFilter==="resuelto") filtered = items.filter(i=>i.estado==="Resuelto");
 
   filtered.sort((a,b)=>{
-    if(currentFilter==="activas" || currentFilter==="todas"){
+    if(!searchQuery && (currentFilter==="activas" || currentFilter==="todas")){
       const r = prioRank(a.prioridad) - prioRank(b.prioridad);
       if(r!==0) return r;
     }
@@ -425,7 +450,9 @@ function render(){
   });
 
   if(filtered.length===0){
-    listEl.innerHTML = `<div class="empty"><div class="big">No hay solicitudes acá</div><div class="small">Tocá "+ Nueva solicitud" para cargar un pedido.</div></div>`;
+    listEl.innerHTML = searchQuery
+      ? `<div class="empty"><div class="big">Sin resultados</div><div class="small">No hay solicitudes registradas para la unidad "${escapeHtml(searchQuery)}".</div></div>`
+      : `<div class="empty"><div class="big">No hay solicitudes acá</div><div class="small">Tocá "+ Nueva solicitud" para cargar un pedido.</div></div>`;
     return;
   }
 
@@ -444,6 +471,7 @@ function render(){
         ${i.observacion ? `<span>· ${escapeHtml(i.observacion)}</span>` : ""}
         ${i.actualizado_por ? `<span>· Últ. cambio: ${escapeHtml(i.actualizado_por)}</span>` : ""}
       </div>
+      ${i.responsabilidad ? `<div class="meta"><span class="resp-tag ${i.responsabilidad==="Edificio"?"edificio":i.responsabilidad==="Particular"?"particular":"confirmar"}">Responsabilidad: ${escapeHtml(i.responsabilidad)}</span></div>` : ""}
       <div class="actions">
         <button data-action="Pendiente" class="${i.estado==="Pendiente"?"on":""}">Pendiente</button>
         <button data-action="En proceso" class="${i.estado==="En proceso"?"on":""}">En proceso</button>
@@ -460,6 +488,11 @@ document.getElementById("tabs").addEventListener("click", (e)=>{
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   tab.classList.add("active");
   currentFilter = tab.getAttribute("data-filter");
+  render();
+});
+
+document.getElementById("searchUnidad").addEventListener("input", (e)=>{
+  searchQuery = e.target.value.trim().toLowerCase();
   render();
 });
 
@@ -488,6 +521,9 @@ document.getElementById("list").addEventListener("click", (e)=>{
   pendingChange = { item, newEstado };
   document.getElementById("whoSub").textContent = `Apto ${item.unidad} → ${newEstado}`;
   document.getElementById("fQuien").value = "";
+  const respWrap = document.getElementById("respWrap");
+  respWrap.style.display = (newEstado === "Resuelto") ? "block" : "none";
+  document.getElementById("fResp").value = item.responsabilidad || "";
   whoBackdrop.classList.add("show");
 });
 
@@ -502,9 +538,15 @@ document.getElementById("whoConfirmBtn").addEventListener("click", async ()=>{
   if(!quien){ showToast("Seleccioná quién hace el cambio"); return; }
   if(!pendingChange) return;
   const { item, newEstado } = pendingChange;
+  let responsabilidad = item.responsabilidad || "";
+  if(newEstado === "Resuelto"){
+    responsabilidad = document.getElementById("fResp").value;
+    if(!responsabilidad){ showToast("Seleccioná de quién es la responsabilidad"); return; }
+  }
   const prevEstado = item.estado;
   item.estado = newEstado;
   item.actualizado_por = quien;
+  item.responsabilidad = responsabilidad;
   whoBackdrop.classList.remove("show");
   render();
   try{
@@ -614,8 +656,8 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
 
 document.getElementById("exportBtn").addEventListener("click", ()=>{
   if(items.length===0){ showToast("No hay datos para exportar"); return; }
-  const headers = ["Unidad","Fecha","Reportado por","Descripción","Prioridad","Observación","Estado"];
-  const rows = items.map(i => [i.unidad, fmtDate(i.fecha), i.reportante, i.descripcion, i.prioridad, i.observacion||"", i.estado]);
+  const headers = ["Unidad","Fecha","Reportado por","Descripción","Prioridad","Observación","Estado","Responsabilidad"];
+  const rows = items.map(i => [i.unidad, fmtDate(i.fecha), i.reportante, i.descripcion, i.prioridad, i.observacion||"", i.estado, i.responsabilidad||""]);
   const csv = [headers, ...rows].map(r =>
     r.map(v => `"${String(v??"").replace(/"/g,'""')}"`).join(",")
   ).join("\n");
