@@ -69,6 +69,8 @@
   .actions button{flex:1;padding:8px 4px;border-radius:9px;border:1px solid var(--line);
     background:#fff;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;}
   .actions button.on{background:var(--navy);border-color:var(--navy);color:var(--ivory);}
+  .edit-link{background:none;border:none;color:var(--muted);font-size:12px;font-weight:600;
+    text-decoration:underline;padding:0;margin-top:10px;cursor:pointer;display:inline-block;}
 
   .empty{text-align:center;padding:60px 20px;color:var(--muted);}
   .empty .big{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;}
@@ -153,8 +155,8 @@
 
 <div class="sheet-backdrop" id="backdrop">
   <div class="sheet">
-    <h2>Nueva solicitud de reparación</h2>
-    <div class="sub">Cargá el pedido tal como te lo comunicó el propietario.</div>
+    <h2 id="formTitle">Nueva solicitud de reparación</h2>
+    <div class="sub" id="formSub">Cargá el pedido tal como te lo comunicó el propietario.</div>
 
     <div class="row2">
       <div class="field">
@@ -223,6 +225,44 @@
     <div class="field">
       <label>Observación (opcional)</label>
       <input type="text" id="fObs" placeholder="Ej: El propietario está en el edificio ahora">
+    </div>
+
+    <div class="field" id="editQuienWrap" style="display:none;">
+      <label>¿Quién realiza esta corrección?</label>
+      <select id="fEditQuien">
+        <option value="">Seleccionar…</option>
+        <optgroup label="Recepción">
+          <option>Lorena</option>
+          <option>Diego</option>
+          <option>Sabinna</option>
+          <option>Fernando</option>
+          <option>Mauro</option>
+          <option>Guillermo</option>
+          <option>Matias</option>
+        </optgroup>
+        <optgroup label="Mucamas">
+          <option>Estefany</option>
+          <option>Silvia</option>
+          <option>Ana</option>
+          <option>Karen</option>
+          <option>Betiana</option>
+          <option>Leticia G</option>
+          <option>Leticia C</option>
+        </optgroup>
+        <optgroup label="Mantenimiento">
+          <option>Andres</option>
+          <option>Gustavo C</option>
+          <option>Gustavo S</option>
+          <option>Sergio</option>
+        </optgroup>
+        <optgroup label="Gobernanta">
+          <option>Mariana</option>
+        </optgroup>
+        <optgroup label="Encargada">
+          <option>Claudia</option>
+        </optgroup>
+        <option value="Otro">Otro</option>
+      </select>
     </div>
 
     <button class="save-btn" id="saveBtn">Guardar solicitud</button>
@@ -409,6 +449,7 @@ function render(){
         <button data-action="En proceso" class="${i.estado==="En proceso"?"on":""}">En proceso</button>
         <button data-action="Resuelto" class="${i.estado==="Resuelto"?"on":""}">Resuelto</button>
       </div>
+      <button class="edit-link" data-edit="${escapeHtml(i.id)}">✎ Editar solicitud</button>
     </div>`;
   }).join("");
 }
@@ -420,6 +461,16 @@ document.getElementById("tabs").addEventListener("click", (e)=>{
   tab.classList.add("active");
   currentFilter = tab.getAttribute("data-filter");
   render();
+});
+
+document.getElementById("list").addEventListener("click", (e)=>{
+  const editBtn = e.target.closest("button[data-edit]");
+  if(editBtn){
+    const id = editBtn.getAttribute("data-edit");
+    const item = items.find(i=>String(i.id)===String(id));
+    if(item) openForm(item);
+    return;
+  }
 });
 
 let pendingChange = null;
@@ -469,19 +520,26 @@ document.getElementById("whoConfirmBtn").addEventListener("click", async ()=>{
 });
 
 const backdrop = document.getElementById("backdrop");
-function openForm(){
-  document.getElementById("fUnidad").value = "";
-  document.getElementById("fFecha").value = todayISO();
-  document.getElementById("fReportante").value = "";
-  document.getElementById("fDesc").value = "";
-  document.getElementById("fObs").value = "";
-  selectedPrio = "Media";
+let editingItem = null;
+function openForm(item){
+  editingItem = item || null;
+  document.getElementById("formTitle").textContent = editingItem ? "Editar solicitud" : "Nueva solicitud de reparación";
+  document.getElementById("formSub").textContent = editingItem ? "Corregí los datos que hagan falta." : "Cargá el pedido tal como te lo comunicó el propietario.";
+  document.getElementById("fUnidad").value = editingItem ? editingItem.unidad : "";
+  document.getElementById("fFecha").value = editingItem ? String(editingItem.fecha).slice(0,10) : todayISO();
+  document.getElementById("fReportante").value = editingItem ? editingItem.reportante : "";
+  document.getElementById("fDesc").value = editingItem ? editingItem.descripcion : "";
+  document.getElementById("fObs").value = editingItem ? (editingItem.observacion || "") : "";
+  selectedPrio = editingItem ? editingItem.prioridad : "Media";
   document.querySelectorAll(".prio-btn").forEach(b=>b.classList.toggle("active", b.getAttribute("data-v")===selectedPrio));
+  document.getElementById("editQuienWrap").style.display = editingItem ? "block" : "none";
+  document.getElementById("fEditQuien").value = "";
+  document.getElementById("saveBtn").textContent = editingItem ? "Guardar cambios" : "Guardar solicitud";
   backdrop.classList.add("show");
 }
-function closeForm(){ backdrop.classList.remove("show"); }
+function closeForm(){ backdrop.classList.remove("show"); editingItem = null; }
 
-document.getElementById("openForm").addEventListener("click", openForm);
+document.getElementById("openForm").addEventListener("click", ()=>openForm(null));
 document.getElementById("cancelBtn").addEventListener("click", closeForm);
 backdrop.addEventListener("click", (e)=>{ if(e.target===backdrop) closeForm(); });
 
@@ -503,6 +561,34 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
   if(!reportante){ showToast("Seleccioná quién reporta"); return; }
   if(!descripcion){ showToast("Describí el problema"); return; }
 
+  const btn = document.getElementById("saveBtn");
+
+  if(editingItem){
+    const quienEdita = document.getElementById("fEditQuien").value;
+    if(!quienEdita){ showToast("Seleccioná quién hace la corrección"); return; }
+    const updated = Object.assign({}, editingItem, {
+      unidad, fecha, reportante, descripcion,
+      prioridad: selectedPrio,
+      observacion,
+      actualizado_por: quienEdita
+    });
+    btn.disabled = true; btn.textContent = "Guardando…";
+    try{
+      await saveItem(updated);
+      const idx = items.findIndex(i=>String(i.id)===String(updated.id));
+      if(idx > -1) items[idx] = updated;
+      render();
+      closeForm();
+      showToast(`Solicitud de Apto ${unidad} actualizada`);
+    }catch(err){
+      showToast("No se pudo guardar. Revisá tu conexión.");
+      console.error(err);
+    }finally{
+      btn.disabled = false; btn.textContent = "Guardar cambios";
+    }
+    return;
+  }
+
   const item = {
     id: uid(),
     unidad, fecha, reportante, descripcion,
@@ -511,7 +597,6 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     estado: "Pendiente"
   };
 
-  const btn = document.getElementById("saveBtn");
   btn.disabled = true; btn.textContent = "Guardando…";
   try{
     await saveItem(item);
