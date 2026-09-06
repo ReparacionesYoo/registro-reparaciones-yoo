@@ -333,6 +333,10 @@
         <option value="A confirmar">A confirmar</option>
       </select>
     </div>
+    <div class="field" id="obsResWrap" style="display:none;">
+      <label>Observaciones de la resolución (opcional)</label>
+      <textarea id="fObsRes" placeholder="Ej: Se cambió la cañería, quedó probado sin pérdidas"></textarea>
+    </div>
     <button class="save-btn" id="whoConfirmBtn">Confirmar cambio</button>
     <button class="cancel-btn" id="whoCancelBtn">Cancelar</button>
   </div>
@@ -472,6 +476,7 @@ function render(){
         ${i.actualizado_por ? `<span>· Últ. cambio: ${escapeHtml(i.actualizado_por)}</span>` : ""}
       </div>
       ${i.responsabilidad ? `<div class="meta"><span class="resp-tag ${i.responsabilidad==="Edificio"?"edificio":i.responsabilidad==="Particular"?"particular":"confirmar"}">Responsabilidad: ${escapeHtml(i.responsabilidad)}</span></div>` : ""}
+      ${i.obs_resolucion ? `<div class="meta"><span>📝 ${escapeHtml(i.obs_resolucion)}</span></div>` : ""}
       <div class="actions">
         <button data-action="Pendiente" class="${i.estado==="Pendiente"?"on":""}">Pendiente</button>
         <button data-action="En proceso" class="${i.estado==="En proceso"?"on":""}">En proceso</button>
@@ -524,6 +529,9 @@ document.getElementById("list").addEventListener("click", (e)=>{
   const respWrap = document.getElementById("respWrap");
   respWrap.style.display = (newEstado === "Resuelto") ? "block" : "none";
   document.getElementById("fResp").value = item.responsabilidad || "";
+  const obsResWrap = document.getElementById("obsResWrap");
+  obsResWrap.style.display = (newEstado === "Resuelto") ? "block" : "none";
+  document.getElementById("fObsRes").value = item.obs_resolucion || "";
   whoBackdrop.classList.add("show");
 });
 
@@ -539,14 +547,17 @@ document.getElementById("whoConfirmBtn").addEventListener("click", async ()=>{
   if(!pendingChange) return;
   const { item, newEstado } = pendingChange;
   let responsabilidad = item.responsabilidad || "";
+  let obsResolucion = item.obs_resolucion || "";
   if(newEstado === "Resuelto"){
     responsabilidad = document.getElementById("fResp").value;
     if(!responsabilidad){ showToast("Seleccioná de quién es la responsabilidad"); return; }
+    obsResolucion = document.getElementById("fObsRes").value.trim();
   }
   const prevEstado = item.estado;
   item.estado = newEstado;
   item.actualizado_por = quien;
   item.responsabilidad = responsabilidad;
+  item.obs_resolucion = obsResolucion;
   whoBackdrop.classList.remove("show");
   render();
   try{
@@ -656,8 +667,8 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
 
 document.getElementById("exportBtn").addEventListener("click", ()=>{
   if(items.length===0){ showToast("No hay datos para exportar"); return; }
-  const headers = ["Unidad","Fecha","Reportado por","Descripción","Prioridad","Observación","Estado","Responsabilidad"];
-  const rows = items.map(i => [i.unidad, fmtDate(i.fecha), i.reportante, i.descripcion, i.prioridad, i.observacion||"", i.estado, i.responsabilidad||""]);
+  const headers = ["Unidad","Fecha","Reportado por","Descripción","Prioridad","Observación","Estado","Responsabilidad","Observaciones de resolución"];
+  const rows = items.map(i => [i.unidad, fmtDate(i.fecha), i.reportante, i.descripcion, i.prioridad, i.observacion||"", i.estado, i.responsabilidad||"", i.obs_resolucion||""]);
   const csv = [headers, ...rows].map(r =>
     r.map(v => `"${String(v??"").replace(/"/g,'""')}"`).join(",")
   ).join("\n");
