@@ -482,4 +482,229 @@ function render(){
 
   listEl.innerHTML = filtered.map(i => {
     const badgeClass = i.estado==="Pendiente" ? "pendiente" : i.estado==="En proceso" ? "proceso" : "resuelto";
-    const prioClass = i.prioridad==="Urgente" ? "urgente" :
+    const prioClass = i.prioridad==="Urgente" ? "urgente" : i.prioridad==="Alta" ? "alta" : "";
+    return `
+    <div class="card" data-id="${escapeHtml(i.id)}">
+      <div class="card-top">
+        <div class="unidad">Apto ${escapeHtml(i.unidad)}<small>${fmtDate(i.fecha)} · ${escapeHtml(i.reportante||"—")}</small></div>
+        <div class="badge ${badgeClass}">${escapeHtml(i.estado)}</div>
+      </div>
+      <div class="desc">${escapeHtml(i.descripcion)}</div>
+      <div class="meta">
+        <span class="prio ${prioClass}">Prioridad: ${escapeHtml(i.prioridad)}</span>
+        ${i.observacion ? `<span>· ${escapeHtml(i.observacion)}</span>` : ""}
+        ${i.actualizado_por ? `<span>· Últ. cambio: ${escapeHtml(i.actualizado_por)}</span>` : ""}
+      </div>
+      ${i.responsabilidad ? `<div class="meta"><span class="resp-tag ${i.responsabilidad==="Edificio"?"edificio":i.responsabilidad==="Particular"?"particular":"confirmar"}">Responsabilidad: ${escapeHtml(i.responsabilidad)}</span></div>` : ""}
+      ${i.obs_resolucion ? `<div class="meta"><span>📝 ${escapeHtml(i.obs_resolucion)}</span></div>` : ""}
+      <div class="actions">
+        <button data-action="Pendiente" class="${i.estado==="Pendiente"?"on":""}">Pendiente</button>
+        <button data-action="En proceso" class="${i.estado==="En proceso"?"on":""}">En proceso</button>
+        <button data-action="Resuelto" class="${i.estado==="Resuelto"?"on":""}">Resuelto</button>
+      </div>
+      <button class="edit-link" data-edit="${escapeHtml(i.id)}">✎ Editar solicitud</button>
+    </div>`;
+  }).join("");
+}
+
+document.getElementById("tabs").addEventListener("click", (e)=>{
+  const tab = e.target.closest(".tab");
+  if(!tab) return;
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  tab.classList.add("active");
+  currentFilter = tab.getAttribute("data-filter");
+  render();
+});
+
+document.getElementById("searchUnidad").addEventListener("input", (e)=>{
+  searchQuery = e.target.value.trim().toLowerCase();
+  render();
+});
+
+document.getElementById("list").addEventListener("click", (e)=>{
+  const editBtn = e.target.closest("button[data-edit]");
+  if(editBtn){
+    const id = editBtn.getAttribute("data-edit");
+    const item = items.find(i=>String(i.id)===String(id));
+    if(item) openForm(item);
+    return;
+  }
+});
+
+let pendingChange = null;
+const whoBackdrop = document.getElementById("whoBackdrop");
+
+document.getElementById("list").addEventListener("click", (e)=>{
+  const btn = e.target.closest("button[data-action]");
+  if(!btn) return;
+  const card = e.target.closest(".card");
+  const id = card.getAttribute("data-id");
+  const item = items.find(i=>String(i.id)===String(id));
+  if(!item) return;
+  const newEstado = btn.getAttribute("data-action");
+  if(item.estado === newEstado) return;
+  pendingChange = { item, newEstado };
+  document.getElementById("whoSub").textContent = `Apto ${item.unidad} → ${newEstado}`;
+  document.getElementById("fQuien").value = "";
+  const respWrap = document.getElementById("respWrap");
+  respWrap.style.display = (newEstado === "Resuelto") ? "block" : "none";
+  document.getElementById("fResp").value = item.responsabilidad || "";
+  const obsResWrap = document.getElementById("obsResWrap");
+  obsResWrap.style.display = (newEstado === "Resuelto") ? "block" : "none";
+  document.getElementById("fObsRes").value = item.obs_resolucion || "";
+  whoBackdrop.classList.add("show");
+});
+
+document.getElementById("whoCancelBtn").addEventListener("click", ()=>{
+  pendingChange = null;
+  whoBackdrop.classList.remove("show");
+});
+whoBackdrop.addEventListener("click", (e)=>{ if(e.target===whoBackdrop){ pendingChange = null; whoBackdrop.classList.remove("show"); } });
+
+document.getElementById("whoConfirmBtn").addEventListener("click", async ()=>{
+  const quien = document.getElementById("fQuien").value;
+  if(!quien){ showToast("Seleccioná quién hace el cambio"); return; }
+  if(!pendingChange) return;
+  const { item, newEstado } = pendingChange;
+  let responsabilidad = item.responsabilidad || "";
+  let obsResolucion = item.obs_resolucion || "";
+  if(newEstado === "Resuelto"){
+    responsabilidad = document.getElementById("fResp").value;
+    if(!responsabilidad){ showToast("Seleccioná de quién es la responsabilidad"); return; }
+    obsResolucion = document.getElementById("fObsRes").value.trim();
+  }
+  const prevEstado = item.estado;
+  item.estado = newEstado;
+  item.actualizado_por = quien;
+  item.responsabilidad = responsabilidad;
+  item.obs_resolucion = obsResolucion;
+  whoBackdrop.classList.remove("show");
+  render();
+  try{
+    await saveItem(item);
+    showToast(`Apto ${item.unidad}: ${newEstado} (${quien})`);
+  }catch(err){
+    item.estado = prevEstado;
+    render();
+    showToast("No se pudo actualizar. Reintentá.");
+    console.error(err);
+  }
+  pendingChange = null;
+});
+
+const backdrop = document.getElementById("backdrop");
+let editingItem = null;
+function openForm(item){
+  editingItem = item || null;
+  document.getElementById("formTitle").textContent = editingItem ? "Editar solicitud" : "Nueva solicitud de reparación";
+  document.getElementById("formSub").textContent = editingItem ? "Corregí los datos que hagan falta." : "Cargá el pedido tal como te lo comunicó el propietario.";
+  document.getElementById("fUnidad").value = editingItem ? editingItem.unidad : "";
+  document.getElementById("fFecha").value = editingItem ? String(editingItem.fecha).slice(0,10) : todayISO();
+  document.getElementById("fReportante").value = editingItem ? editingItem.reportante : "";
+  document.getElementById("fDesc").value = editingItem ? editingItem.descripcion : "";
+  document.getElementById("fObs").value = editingItem ? (editingItem.observacion || "") : "";
+  selectedPrio = editingItem ? editingItem.prioridad : "Media";
+  document.querySelectorAll(".prio-btn").forEach(b=>b.classList.toggle("active", b.getAttribute("data-v")===selectedPrio));
+  document.getElementById("editQuienWrap").style.display = editingItem ? "block" : "none";
+  document.getElementById("fEditQuien").value = "";
+  document.getElementById("saveBtn").textContent = editingItem ? "Guardar cambios" : "Guardar solicitud";
+  backdrop.classList.add("show");
+}
+function closeForm(){ backdrop.classList.remove("show"); editingItem = null; }
+
+document.getElementById("openForm").addEventListener("click", ()=>openForm(null));
+document.getElementById("cancelBtn").addEventListener("click", closeForm);
+backdrop.addEventListener("click", (e)=>{ if(e.target===backdrop) closeForm(); });
+
+document.getElementById("prioPicker").addEventListener("click", (e)=>{
+  const btn = e.target.closest(".prio-btn");
+  if(!btn) return;
+  selectedPrio = btn.getAttribute("data-v");
+  document.querySelectorAll(".prio-btn").forEach(b=>b.classList.toggle("active", b===btn));
+});
+
+document.getElementById("saveBtn").addEventListener("click", async ()=>{
+  const unidad = document.getElementById("fUnidad").value.trim();
+  const fecha = document.getElementById("fFecha").value || todayISO();
+  const reportante = document.getElementById("fReportante").value;
+  const descripcion = document.getElementById("fDesc").value.trim();
+  const observacion = document.getElementById("fObs").value.trim();
+
+  if(!unidad){ showToast("Ingresá el número de unidad"); return; }
+  if(!reportante){ showToast("Seleccioná quién reporta"); return; }
+  if(!descripcion){ showToast("Describí el problema"); return; }
+
+  const btn = document.getElementById("saveBtn");
+
+  if(editingItem){
+    const quienEdita = document.getElementById("fEditQuien").value;
+    if(!quienEdita){ showToast("Seleccioná quién hace la corrección"); return; }
+    const updated = Object.assign({}, editingItem, {
+      unidad, fecha, reportante, descripcion,
+      prioridad: selectedPrio,
+      observacion,
+      actualizado_por: quienEdita
+    });
+    btn.disabled = true; btn.textContent = "Guardando…";
+    try{
+      await saveItem(updated);
+      const idx = items.findIndex(i=>String(i.id)===String(updated.id));
+      if(idx > -1) items[idx] = updated;
+      render();
+      closeForm();
+      showToast(`Solicitud de Apto ${unidad} actualizada`);
+    }catch(err){
+      showToast("No se pudo guardar. Revisá tu conexión.");
+      console.error(err);
+    }finally{
+      btn.disabled = false; btn.textContent = "Guardar cambios";
+    }
+    return;
+  }
+
+  const item = {
+    id: uid(),
+    unidad, fecha, reportante, descripcion,
+    prioridad: selectedPrio,
+    observacion,
+    estado: "Pendiente"
+  };
+
+  btn.disabled = true; btn.textContent = "Guardando…";
+  try{
+    await saveItem(item);
+    items.unshift(item);
+    render();
+    closeForm();
+    showToast(`Solicitud de Apto ${unidad} guardada`);
+  }catch(err){
+    showToast("No se pudo guardar. Revisá tu conexión.");
+    console.error(err);
+  }finally{
+    btn.disabled = false; btn.textContent = "Guardar solicitud";
+  }
+});
+
+document.getElementById("exportBtn").addEventListener("click", ()=>{
+  if(items.length===0){ showToast("No hay datos para exportar"); return; }
+  const headers = ["Unidad","Fecha","Reportado por","Descripción","Prioridad","Observación","Estado","Responsabilidad","Observaciones de resolución"];
+  const rows = items.map(i => [i.unidad, fmtDate(i.fecha), i.reportante, i.descripcion, i.prioridad, i.observacion||"", i.estado, i.responsabilidad||"", i.obs_resolucion||""]);
+  const csv = [headers, ...rows].map(r =>
+    r.map(v => `"${String(v??"").replace(/"/g,'""')}"`).join(",")
+  ).join("\n");
+  const blob = new Blob(["\uFEFF"+csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Registro_Reparaciones_Yoo_${todayISO()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+if(checkConfig()){
+  loadItems();
+  setInterval(loadItems, 30000); // refresco automático cada 30s para reflejar cambios de otros dispositivos
+}
+</script>
+</body>
+</html>
