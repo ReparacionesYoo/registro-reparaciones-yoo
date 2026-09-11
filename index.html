@@ -20,8 +20,6 @@
   OneSignalDeferred.push(async function (OneSignal) {
     await OneSignal.init({
       appId: "c97b78cb-9802-47c4-aa37-01f940452df8",
-      serviceWorkerPath: "registro-reparaciones-yoo/OneSignalSDKWorker.js",
-      serviceWorkerParam: { scope: "/registro-reparaciones-yoo/" },
     });
     OneSignal.Notifications.requestPermission();
   });
