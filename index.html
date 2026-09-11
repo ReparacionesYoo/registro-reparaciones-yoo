@@ -22,6 +22,11 @@
       appId: "c97b78cb-9802-47c4-aa37-01f940452df8",
     });
     OneSignal.Notifications.requestPermission();
+    document.getElementById("notifBtn").addEventListener("click", async ()=>{
+      try{
+        await OneSignal.Notifications.requestPermission();
+      }catch(e){ /* ignora si el navegador ya decidió */ }
+    });
   });
 </script>
 <style>
@@ -158,7 +163,10 @@
         <h1>Registro de Reparaciones</h1>
         <p>Solicitudes de Propietarios recibidas por Mucamas, Recepción y Mantenimiento</p>
       </div>
-      <button class="icon-btn" id="exportBtn">Exportar</button>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+        <button class="icon-btn" id="exportBtn">Exportar</button>
+        <button class="icon-btn" id="notifBtn">🔔 Activar avisos</button>
+      </div>
     </div>
     <div class="summary">
       <div class="chip"><div class="n" id="sumPend">–</div><div class="l">PENDIENTES</div></div>
