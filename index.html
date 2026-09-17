@@ -45,6 +45,8 @@
     --amber-bg:#FBF1DD;
     --green:#3E7A52;
     --green-bg:#E6F1E9;
+    --teal:#1F6E6B;
+    --teal-bg:#E3F0EF;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--ivory);color:var(--text);
@@ -70,6 +72,11 @@
   .chip .n{font-size:20px;font-weight:700;line-height:1;}
   .chip .l{font-size:10.5px;color:#B7C0CE;margin-top:3px;letter-spacing:.3px;}
 
+  .scope-tabs{display:flex;gap:8px;padding:14px 16px 0;background:var(--ivory);}
+  .scope-tab{flex:1;text-align:center;padding:10px 6px;border-radius:10px;border:1.5px solid var(--line);
+    background:#fff;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
+  .scope-tab.active{background:var(--teal);border-color:var(--teal);color:#fff;}
+
   .tabs{display:flex;gap:6px;padding:14px 16px 12px;overflow-x:auto;background:var(--ivory);
     border-bottom:1px solid var(--line);}
   .tab{flex:none;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:600;
@@ -86,6 +93,8 @@
   .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
   .unidad{font-size:15px;font-weight:700;}
   .unidad small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:2px;}
+  .area-tag{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;
+    background:var(--teal-bg);color:var(--teal);margin-left:6px;vertical-align:middle;}
   .badge{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;white-space:nowrap;}
   .badge.pendiente{background:var(--red-bg);color:var(--red);}
   .badge.proceso{background:var(--amber-bg);color:var(--amber);}
@@ -139,6 +148,10 @@
   .prio-btn.active.sel-alta{background:#FCE7DE;border-color:#C4642B;color:#C4642B;}
   .prio-btn.active.sel-urgente{background:var(--red-bg);border-color:var(--red);color:var(--red);}
 
+  .tipo-btn{flex:1;text-align:center;padding:10px 4px;border-radius:10px;border:1.5px solid var(--line);
+    font-size:12.5px;font-weight:700;cursor:pointer;background:#fff;color:var(--muted);}
+  .tipo-btn.active{background:var(--navy);border-color:var(--navy);color:var(--ivory);}
+
   .save-btn{width:100%;background:var(--navy);color:var(--ivory);border:none;border-radius:12px;
     padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px;}
   .save-btn:disabled{opacity:.6;}
@@ -175,6 +188,11 @@
     </div>
   </header>
 
+  <div class="scope-tabs" id="scopeTabs">
+    <div class="scope-tab active" data-scope="unidad">🏠 Unidades</div>
+    <div class="scope-tab" data-scope="area">🏊 Áreas comunes</div>
+  </div>
+
   <div class="tabs" id="tabs">
     <div class="tab active" data-filter="activas">Activas</div>
     <div class="tab" data-filter="pendiente">Pendientes</div>
@@ -199,10 +217,31 @@
     <h2 id="formTitle">Nueva solicitud de reparación</h2>
     <div class="sub" id="formSub">Cargá el pedido tal como te lo comunicó el propietario.</div>
 
+    <div class="field">
+      <label>Tipo de solicitud</label>
+      <div class="prio-picker" id="tipoPicker">
+        <div class="tipo-btn active" data-v="unidad">🏠 Unidad</div>
+        <div class="tipo-btn" data-v="area">🏊 Área común</div>
+      </div>
+    </div>
+
     <div class="row2">
       <div class="field">
-        <label>Unidad (Apto)</label>
-        <input type="text" id="fUnidad" placeholder="Ej: 1203" inputmode="numeric">
+        <label id="fUnidadLabel">Unidad (Apto)</label>
+        <input type="text" id="fUnidad" placeholder="Ej: 1203" inputmode="numeric" list="areaSuggestions">
+        <datalist id="areaSuggestions">
+          <option value="Spa">
+          <option value="Piscina interior">
+          <option value="Piscina exterior">
+          <option value="Gimnasio">
+          <option value="Garage">
+          <option value="Fachada">
+          <option value="Jardín">
+          <option value="Palieres">
+          <option value="Seguridad">
+          <option value="Recepción">
+          <option value="Ascensores">
+        </datalist>
       </div>
       <div class="field">
         <label>Fecha</label>
@@ -382,7 +421,9 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyEUcZPVsC08aoSnOn6zncR
 
 let items = [];
 let currentFilter = "activas";
+let currentScope = "unidad"; // "unidad" | "area"
 let selectedPrio = "Media";
+let selectedTipo = "unidad"; // tipo elegido en el formulario
 let searchQuery = "";
 
 function todayISO(){
@@ -411,6 +452,9 @@ function escapeHtml(s){
 }
 function prioRank(p){
   return {Urgente:0, Alta:1, Media:2, Baja:3}[p] ?? 4;
+}
+function isArea(i){
+  return i && i.tipo === "area";
 }
 
 function checkConfig(){
@@ -457,21 +501,23 @@ async function saveItem(item){
 function render(){
   const listEl = document.getElementById("list");
 
-  const pend = items.filter(i=>i.estado==="Pendiente").length;
-  const proc = items.filter(i=>i.estado==="En proceso").length;
-  const res  = items.filter(i=>i.estado==="Resuelto").length;
+  const scoped = items.filter(i => isArea(i) === (currentScope === "area"));
+
+  const pend = scoped.filter(i=>i.estado==="Pendiente").length;
+  const proc = scoped.filter(i=>i.estado==="En proceso").length;
+  const res  = scoped.filter(i=>i.estado==="Resuelto").length;
   document.getElementById("sumPend").textContent = pend;
   document.getElementById("sumProc").textContent = proc;
   document.getElementById("sumRes").textContent = res;
 
   let filtered;
   if(searchQuery){
-    filtered = items.filter(i => String(i.unidad).toLowerCase().includes(searchQuery));
-  } else if(currentFilter==="todas") filtered = items.slice();
-  else if(currentFilter==="activas") filtered = items.filter(i=>i.estado!=="Resuelto");
-  else if(currentFilter==="pendiente") filtered = items.filter(i=>i.estado==="Pendiente");
-  else if(currentFilter==="proceso") filtered = items.filter(i=>i.estado==="En proceso");
-  else if(currentFilter==="resuelto") filtered = items.filter(i=>i.estado==="Resuelto");
+    filtered = scoped.filter(i => String(i.unidad).toLowerCase().includes(searchQuery));
+  } else if(currentFilter==="todas") filtered = scoped.slice();
+  else if(currentFilter==="activas") filtered = scoped.filter(i=>i.estado!=="Resuelto");
+  else if(currentFilter==="pendiente") filtered = scoped.filter(i=>i.estado==="Pendiente");
+  else if(currentFilter==="proceso") filtered = scoped.filter(i=>i.estado==="En proceso");
+  else if(currentFilter==="resuelto") filtered = scoped.filter(i=>i.estado==="Resuelto");
 
   filtered.sort((a,b)=>{
     if(!searchQuery && (currentFilter==="activas" || currentFilter==="todas")){
@@ -482,19 +528,23 @@ function render(){
   });
 
   if(filtered.length===0){
+    const scopeWord = currentScope === "area" ? "de áreas comunes" : "de unidades";
     listEl.innerHTML = searchQuery
-      ? `<div class="empty"><div class="big">Sin resultados</div><div class="small">No hay solicitudes registradas para la unidad "${escapeHtml(searchQuery)}".</div></div>`
-      : `<div class="empty"><div class="big">No hay solicitudes acá</div><div class="small">Tocá "+ Nueva solicitud" para cargar un pedido.</div></div>`;
+      ? `<div class="empty"><div class="big">Sin resultados</div><div class="small">No hay solicitudes ${scopeWord} para "${escapeHtml(searchQuery)}".</div></div>`
+      : `<div class="empty"><div class="big">No hay solicitudes acá</div><div class="small">Tocá "+ Nueva solicitud" para cargar un pedido ${scopeWord}.</div></div>`;
     return;
   }
 
   listEl.innerHTML = filtered.map(i => {
     const badgeClass = i.estado==="Pendiente" ? "pendiente" : i.estado==="En proceso" ? "proceso" : "resuelto";
     const prioClass = i.prioridad==="Urgente" ? "urgente" : i.prioridad==="Alta" ? "alta" : "";
+    const titulo = isArea(i)
+      ? `${escapeHtml(i.unidad)}<span class="area-tag">Área común</span>`
+      : `Apto ${escapeHtml(i.unidad)}`;
     return `
     <div class="card" data-id="${escapeHtml(i.id)}">
       <div class="card-top">
-        <div class="unidad">Apto ${escapeHtml(i.unidad)}<small>${fmtDate(i.fecha)} · ${escapeHtml(i.reportante||"—")}</small></div>
+        <div class="unidad">${titulo}<small>${fmtDate(i.fecha)} · ${escapeHtml(i.reportante||"—")}</small></div>
         <div class="badge ${badgeClass}">${escapeHtml(i.estado)}</div>
       </div>
       <div class="desc">${escapeHtml(i.descripcion)}</div>
@@ -514,6 +564,23 @@ function render(){
     </div>`;
   }).join("");
 }
+
+document.getElementById("scopeTabs").addEventListener("click", (e)=>{
+  const tab = e.target.closest(".scope-tab");
+  if(!tab) return;
+  document.querySelectorAll(".scope-tab").forEach(t=>t.classList.remove("active"));
+  tab.classList.add("active");
+  currentScope = tab.getAttribute("data-scope");
+  const search = document.getElementById("searchUnidad");
+  if(currentScope === "area"){
+    search.placeholder = "Buscar por área (ej: Spa)...";
+    search.removeAttribute("inputmode");
+  } else {
+    search.placeholder = "Buscar por unidad (ej: 303)...";
+    search.setAttribute("inputmode","numeric");
+  }
+  render();
+});
 
 document.getElementById("tabs").addEventListener("click", (e)=>{
   const tab = e.target.closest(".tab");
@@ -552,7 +619,8 @@ document.getElementById("list").addEventListener("click", (e)=>{
   const newEstado = btn.getAttribute("data-action");
   if(item.estado === newEstado) return;
   pendingChange = { item, newEstado };
-  document.getElementById("whoSub").textContent = `Apto ${item.unidad} → ${newEstado}`;
+  const etiqueta = isArea(item) ? item.unidad : `Apto ${item.unidad}`;
+  document.getElementById("whoSub").textContent = `${etiqueta} → ${newEstado}`;
   document.getElementById("fQuien").value = "";
   const respWrap = document.getElementById("respWrap");
   respWrap.style.display = (newEstado === "Resuelto") ? "block" : "none";
@@ -590,7 +658,8 @@ document.getElementById("whoConfirmBtn").addEventListener("click", async ()=>{
   render();
   try{
     await saveItem(item);
-    showToast(`Apto ${item.unidad}: ${newEstado} (${quien})`);
+    const etiqueta = isArea(item) ? item.unidad : `Apto ${item.unidad}`;
+    showToast(`${etiqueta}: ${newEstado} (${quien})`);
   }catch(err){
     item.estado = prevEstado;
     render();
@@ -602,17 +671,45 @@ document.getElementById("whoConfirmBtn").addEventListener("click", async ()=>{
 
 const backdrop = document.getElementById("backdrop");
 let editingItem = null;
+
+function updateUnidadFieldLabel(){
+  const lbl = document.getElementById("fUnidadLabel");
+  const inp = document.getElementById("fUnidad");
+  if(selectedTipo === "area"){
+    lbl.textContent = "Área / Zona";
+    inp.placeholder = "Ej: Spa, Piscina exterior, Gimnasio…";
+    inp.removeAttribute("inputmode");
+  } else {
+    lbl.textContent = "Unidad (Apto)";
+    inp.placeholder = "Ej: 1203";
+    inp.setAttribute("inputmode","numeric");
+  }
+}
+
+document.getElementById("tipoPicker").addEventListener("click", (e)=>{
+  const btn = e.target.closest(".tipo-btn");
+  if(!btn) return;
+  selectedTipo = btn.getAttribute("data-v");
+  document.querySelectorAll("#tipoPicker .tipo-btn").forEach(b=>b.classList.toggle("active", b===btn));
+  updateUnidadFieldLabel();
+});
+
 function openForm(item){
   editingItem = item || null;
   document.getElementById("formTitle").textContent = editingItem ? "Editar solicitud" : "Nueva solicitud de reparación";
   document.getElementById("formSub").textContent = editingItem ? "Corregí los datos que hagan falta." : "Cargá el pedido tal como te lo comunicó el propietario.";
+
+  selectedTipo = editingItem ? (editingItem.tipo === "area" ? "area" : "unidad") : currentScope;
+  document.querySelectorAll("#tipoPicker .tipo-btn").forEach(b=>b.classList.toggle("active", b.getAttribute("data-v")===selectedTipo));
+  updateUnidadFieldLabel();
+
   document.getElementById("fUnidad").value = editingItem ? editingItem.unidad : "";
   document.getElementById("fFecha").value = editingItem ? String(editingItem.fecha).slice(0,10) : todayISO();
   document.getElementById("fReportante").value = editingItem ? editingItem.reportante : "";
   document.getElementById("fDesc").value = editingItem ? editingItem.descripcion : "";
   document.getElementById("fObs").value = editingItem ? (editingItem.observacion || "") : "";
   selectedPrio = editingItem ? editingItem.prioridad : "Media";
-  document.querySelectorAll(".prio-btn").forEach(b=>b.classList.toggle("active", b.getAttribute("data-v")===selectedPrio));
+  document.querySelectorAll(".prio-picker#prioPicker .prio-btn").forEach(b=>b.classList.toggle("active", b.getAttribute("data-v")===selectedPrio));
   document.getElementById("editQuienWrap").style.display = editingItem ? "block" : "none";
   document.getElementById("fEditQuien").value = "";
   document.getElementById("saveBtn").textContent = editingItem ? "Guardar cambios" : "Guardar solicitud";
@@ -628,7 +725,7 @@ document.getElementById("prioPicker").addEventListener("click", (e)=>{
   const btn = e.target.closest(".prio-btn");
   if(!btn) return;
   selectedPrio = btn.getAttribute("data-v");
-  document.querySelectorAll(".prio-btn").forEach(b=>b.classList.toggle("active", b===btn));
+  document.querySelectorAll("#prioPicker .prio-btn").forEach(b=>b.classList.toggle("active", b===btn));
 });
 
 document.getElementById("saveBtn").addEventListener("click", async ()=>{
@@ -637,8 +734,9 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
   const reportante = document.getElementById("fReportante").value;
   const descripcion = document.getElementById("fDesc").value.trim();
   const observacion = document.getElementById("fObs").value.trim();
+  const tipo = selectedTipo;
 
-  if(!unidad){ showToast("Ingresá el número de unidad"); return; }
+  if(!unidad){ showToast(tipo === "area" ? "Ingresá el área o zona" : "Ingresá el número de unidad"); return; }
   if(!reportante){ showToast("Seleccioná quién reporta"); return; }
   if(!descripcion){ showToast("Describí el problema"); return; }
 
@@ -648,7 +746,7 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     const quienEdita = document.getElementById("fEditQuien").value;
     if(!quienEdita){ showToast("Seleccioná quién hace la corrección"); return; }
     const updated = Object.assign({}, editingItem, {
-      unidad, fecha, reportante, descripcion,
+      unidad, fecha, reportante, descripcion, tipo,
       prioridad: selectedPrio,
       observacion,
       actualizado_por: quienEdita
@@ -660,7 +758,7 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
       if(idx > -1) items[idx] = updated;
       render();
       closeForm();
-      showToast(`Solicitud de Apto ${unidad} actualizada`);
+      showToast(`Solicitud actualizada`);
     }catch(err){
       showToast("No se pudo guardar. Revisá tu conexión.");
       console.error(err);
@@ -672,7 +770,7 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
 
   const item = {
     id: uid(),
-    unidad, fecha, reportante, descripcion,
+    unidad, fecha, reportante, descripcion, tipo,
     prioridad: selectedPrio,
     observacion,
     estado: "Pendiente"
@@ -684,7 +782,7 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     items.unshift(item);
     render();
     closeForm();
-    showToast(`Solicitud de Apto ${unidad} guardada`);
+    showToast(`Solicitud guardada`);
   }catch(err){
     showToast("No se pudo guardar. Revisá tu conexión.");
     console.error(err);
@@ -695,8 +793,8 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
 
 document.getElementById("exportBtn").addEventListener("click", ()=>{
   if(items.length===0){ showToast("No hay datos para exportar"); return; }
-  const headers = ["Unidad","Fecha","Reportado por","Descripción","Prioridad","Observación","Estado","Responsabilidad","Observaciones de resolución"];
-  const rows = items.map(i => [i.unidad, fmtDate(i.fecha), i.reportante, i.descripcion, i.prioridad, i.observacion||"", i.estado, i.responsabilidad||"", i.obs_resolucion||""]);
+  const headers = ["Tipo","Unidad / Área","Fecha","Reportado por","Descripción","Prioridad","Observación","Estado","Responsabilidad","Observaciones de resolución"];
+  const rows = items.map(i => [isArea(i) ? "Área común" : "Unidad", i.unidad, fmtDate(i.fecha), i.reportante, i.descripcion, i.prioridad, i.observacion||"", i.estado, i.responsabilidad||"", i.obs_resolucion||""]);
   const csv = [headers, ...rows].map(r =>
     r.map(v => `"${String(v??"").replace(/"/g,'""')}"`).join(",")
   ).join("\n");
