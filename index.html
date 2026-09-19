@@ -80,7 +80,7 @@
     background:#fff;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
   .scope-tab.active{background:var(--teal);border-color:var(--teal);color:#fff;}
 
-  .scope-tab .yoo-mark{font-family:"Poppins",Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:-0.5px;color:var(--gold);margin-right:6px;vertical-align:-1px;text-transform:lowercase;}
+  .yoo-mark{font-family:"Poppins",Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:-0.5px;color:var(--gold);margin-right:6px;vertical-align:-1px;text-transform:lowercase;}
   .tabs{display:flex;gap:6px;padding:14px 16px 12px;overflow-x:auto;background:var(--ivory);
     border-bottom:1px solid var(--line);}
   .tab{flex:none;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:600;
@@ -224,15 +224,15 @@
     <div class="field">
       <label>Tipo de solicitud</label>
       <div class="prio-picker" id="tipoPicker">
-        <div class="tipo-btn active" data-v="unidad">🏠 Unidad</div>
-        <div class="tipo-btn" data-v="area">🏊 Área común</div>
+        <div class="tipo-btn active" data-v="unidad"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="4" y="3" width="16" height="18" rx="1"/><line x1="8" y1="7.5" x2="8" y2="7.5"/><line x1="12" y1="7.5" x2="12" y2="7.5"/><line x1="16" y1="7.5" x2="16" y2="7.5"/><line x1="8" y1="11.5" x2="8" y2="11.5"/><line x1="12" y1="11.5" x2="12" y2="11.5"/><line x1="16" y1="11.5" x2="16" y2="11.5"/><line x1="8" y1="15.5" x2="8" y2="15.5"/><line x1="16" y1="15.5" x2="16" y2="15.5"/><rect x="10.5" y="15" width="3" height="6"/></svg>Unidad</div>
+        <div class="tipo-btn" data-v="area"><span class="yoo-mark" style="margin-right:4px;">yoo</span>Área común</div>
       </div>
     </div>
 
     <div class="row2">
       <div class="field">
         <label id="fUnidadLabel">Unidad (Apto)</label>
-        <input type="text" id="fUnidad" placeholder="Ej: 1203" inputmode="numeric" list="areaSuggestions">
+        <input type="text" id="fUnidad" name="unidad_input" placeholder="Ej: 1203" inputmode="numeric" autocomplete="off">
         <datalist id="areaSuggestions">
           <option value="Spa">
           <option value="Piscina interior">
@@ -274,6 +274,9 @@
           <option>Betiana</option>
           <option>Leticia G</option>
           <option>Leticia C</option>
+          <option>Lucia R</option>
+          <option>Luciana D</option>
+          <option>Lucia G</option>
         </optgroup>
         <optgroup label="Mantenimiento">
           <option>Andres</option>
@@ -332,6 +335,9 @@
           <option>Betiana</option>
           <option>Leticia G</option>
           <option>Leticia C</option>
+          <option>Lucia R</option>
+          <option>Luciana D</option>
+          <option>Lucia G</option>
         </optgroup>
         <optgroup label="Mantenimiento">
           <option>Andres</option>
@@ -379,6 +385,9 @@
           <option>Betiana</option>
           <option>Leticia G</option>
           <option>Leticia C</option>
+          <option>Lucia R</option>
+          <option>Luciana D</option>
+          <option>Lucia G</option>
         </optgroup>
         <optgroup label="Mantenimiento">
           <option>Andres</option>
@@ -444,6 +453,9 @@
           <option>Betiana</option>
           <option>Leticia G</option>
           <option>Leticia C</option>
+          <option>Lucia R</option>
+          <option>Luciana D</option>
+          <option>Lucia G</option>
         </optgroup>
         <optgroup label="Mantenimiento">
           <option>Andres</option>
@@ -468,6 +480,67 @@
 
     <button class="save-btn" id="matAddBtn">Agregar al registro</button>
     <button class="cancel-btn" id="matCloseBtn">Cerrar</button>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="fotosBackdrop">
+  <div class="sheet">
+    <h2>Fotos</h2>
+    <div class="sub" id="fotosSub"></div>
+
+    <div class="field">
+      <label>Fotos cargadas</label>
+      <div id="fotosGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
+    </div>
+
+    <div class="field">
+      <label>¿Quién sube esta foto?</label>
+      <select id="fFotoQuien">
+        <option value="">Seleccionar…</option>
+        <optgroup label="Recepción">
+          <option>Lorena</option>
+          <option>Diego</option>
+          <option>Sabinna</option>
+          <option>Fernando</option>
+          <option>Mauro</option>
+          <option>Guillermo</option>
+          <option>Matias</option>
+        </optgroup>
+        <optgroup label="Mucamas">
+          <option>Estefany</option>
+          <option>Silvia</option>
+          <option>Ana</option>
+          <option>Karen</option>
+          <option>Betiana</option>
+          <option>Leticia G</option>
+          <option>Leticia C</option>
+          <option>Lucia R</option>
+          <option>Luciana D</option>
+          <option>Lucia G</option>
+        </optgroup>
+        <optgroup label="Mantenimiento">
+          <option>Andres</option>
+          <option>Gustavo C</option>
+          <option>Gustavo S</option>
+          <option>Sergio</option>
+        </optgroup>
+        <optgroup label="Gobernanta">
+          <option>Mariana</option>
+        </optgroup>
+        <optgroup label="Encargada">
+          <option>Claudia</option>
+        </optgroup>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Agregar foto</label>
+      <input type="file" id="fFotoInput" accept="image/*" capture="environment">
+    </div>
+
+    <button class="save-btn" id="fotoUploadBtn">Subir foto</button>
+    <button class="cancel-btn" id="fotoCloseBtn">Cerrar</button>
   </div>
 </div>
 
@@ -523,6 +596,13 @@ function matLines(i){
 }
 function matCount(i){
   return matLines(i).length;
+}
+function parseFotos(i){
+  if(!i || !i.fotos) return [];
+  try{ const arr = JSON.parse(i.fotos); return Array.isArray(arr) ? arr : []; }catch(e){ return []; }
+}
+function fotoCount(i){
+  return parseFotos(i).length;
 }
 
 function checkConfig(){
@@ -631,6 +711,7 @@ function render(){
       <div style="display:flex;gap:14px;flex-wrap:wrap;">
         <button class="edit-link" data-edit="${escapeHtml(i.id)}">✎ Editar solicitud</button>
         ${!isArea(i) ? `<button class="edit-link" data-materiales="${escapeHtml(i.id)}">🔧 Materiales${matCount(i)?` (${matCount(i)})`:""}</button>` : ""}
+        <button class="edit-link" data-fotos="${escapeHtml(i.id)}">📷 Fotos${fotoCount(i)?` (${fotoCount(i)})`:""}</button>
       </div>
     </div>`;
   }).join("");
@@ -680,6 +761,13 @@ document.getElementById("list").addEventListener("click", (e)=>{
     const id = matBtn.getAttribute("data-materiales");
     const item = items.find(i=>String(i.id)===String(id));
     if(item) openMaterialesSheet(item);
+    return;
+  }
+  const fotoBtn = e.target.closest("button[data-fotos]");
+  if(fotoBtn){
+    const id = fotoBtn.getAttribute("data-fotos");
+    const item = items.find(i=>String(i.id)===String(id));
+    if(item) openFotosSheet(item);
     return;
   }
 });
@@ -804,8 +892,111 @@ document.getElementById("whoConfirmBtn").addEventListener("click", async ()=>{
   pendingChange = null;
 });
 
+let pendingFotosId = null;
+const fotosBackdrop = document.getElementById("fotosBackdrop");
+
+function renderFotosGrid(item){
+  const grid = document.getElementById("fotosGrid");
+  const fotos = parseFotos(item);
+  if(fotos.length === 0){
+    grid.innerHTML = `<div style="grid-column:1/-1;color:var(--muted);font-size:12.5px;">Todavía no se cargó ninguna foto para esta solicitud.</div>`;
+    return;
+  }
+  grid.innerHTML = fotos.map(f => `
+    <a href="${escapeHtml(f.url)}" target="_blank" rel="noopener" style="display:block;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--line);">
+      <img src="${escapeHtml(f.url)}" alt="Foto" style="width:100%;height:100%;object-fit:cover;display:block;">
+    </a>`).join("");
+}
+
+function openFotosSheet(item){
+  pendingFotosId = item.id;
+  const etiqueta = isArea(item) ? item.unidad : `Apto ${item.unidad}`;
+  document.getElementById("fotosSub").textContent = `${etiqueta} — ${item.descripcion}`;
+  document.getElementById("fFotoQuien").value = "";
+  document.getElementById("fFotoInput").value = "";
+  renderFotosGrid(item);
+  fotosBackdrop.classList.add("show");
+}
+function closeFotosSheet(){
+  fotosBackdrop.classList.remove("show");
+  pendingFotosId = null;
+}
+document.getElementById("fotoCloseBtn").addEventListener("click", closeFotosSheet);
+fotosBackdrop.addEventListener("click", (e)=>{ if(e.target===fotosBackdrop) closeFotosSheet(); });
+
+function comprimirImagen(file, maxDim, calidad){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error("No se pudo leer la imagen"));
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=>reject(new Error("No se pudo procesar la imagen"));
+      img.onload = ()=>{
+        let { width, height } = img;
+        if(width > maxDim || height > maxDim){
+          if(width > height){ height = Math.round(height * (maxDim / width)); width = maxDim; }
+          else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", calidad);
+        resolve(dataUrl.split(",")[1]);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function subirFoto(item, file, quien){
+  const base64 = await comprimirImagen(file, 1600, 0.72);
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "uploadFoto",
+      id: item.id,
+      filename: (file.name || "foto") + ".jpg",
+      mimeType: "image/jpeg",
+      data: base64,
+      quien: quien
+    })
+  });
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || "No se pudo subir la foto");
+  return data.fotos;
+}
+
+document.getElementById("fotoUploadBtn").addEventListener("click", async ()=>{
+  const item = items.find(i=>String(i.id)===String(pendingFotosId));
+  if(!item) return;
+  const quien = document.getElementById("fFotoQuien").value;
+  const fileInput = document.getElementById("fFotoInput");
+  const file = fileInput.files[0];
+  if(!quien){ showToast("Seleccioná quién sube la foto"); return; }
+  if(!file){ showToast("Elegí o sacá una foto"); return; }
+
+  const btn = document.getElementById("fotoUploadBtn");
+  btn.disabled = true; btn.textContent = "Subiendo…";
+  try{
+    const fotosActualizadas = await subirFoto(item, file, quien);
+    item.fotos = fotosActualizadas;
+    fileInput.value = "";
+    renderFotosGrid(item);
+    render();
+    showToast("Foto subida");
+  }catch(err){
+    showToast("No se pudo subir la foto. Reintentá.");
+    console.error(err);
+  }finally{
+    btn.disabled = false; btn.textContent = "Subir foto";
+  }
+});
+
 const backdrop = document.getElementById("backdrop");
 let editingItem = null;
+
+
 
 function updateUnidadFieldLabel(){
   const lbl = document.getElementById("fUnidadLabel");
@@ -814,10 +1005,14 @@ function updateUnidadFieldLabel(){
     lbl.textContent = "Área / Zona";
     inp.placeholder = "Ej: Spa, Piscina exterior, Gimnasio…";
     inp.removeAttribute("inputmode");
+    inp.setAttribute("list","areaSuggestions");
+    inp.setAttribute("name","area_input");
   } else {
     lbl.textContent = "Unidad (Apto)";
     inp.placeholder = "Ej: 1203";
     inp.setAttribute("inputmode","numeric");
+    inp.removeAttribute("list");
+    inp.setAttribute("name","unidad_input");
   }
 }
 
@@ -928,8 +1123,8 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
 
 document.getElementById("exportBtn").addEventListener("click", ()=>{
   if(items.length===0){ showToast("No hay datos para exportar"); return; }
-  const headers = ["Tipo","Unidad / Área","Fecha","Reportado por","Descripción","Prioridad","Observación","Estado","Responsabilidad","Observaciones de resolución","Materiales utilizados"];
-  const rows = items.map(i => [isArea(i) ? "Área común" : "Unidad", i.unidad, fmtDate(i.fecha), i.reportante, i.descripcion, i.prioridad, i.observacion||"", i.estado, i.responsabilidad||"", i.obs_resolucion||"", (i.materiales||"").replace(/\n/g, " | ")]);
+  const headers = ["Tipo","Unidad / Área","Fecha","Reportado por","Descripción","Prioridad","Observación","Estado","Responsabilidad","Observaciones de resolución","Materiales utilizados","Fotos"];
+  const rows = items.map(i => [isArea(i) ? "Área común" : "Unidad", i.unidad, fmtDate(i.fecha), i.reportante, i.descripcion, i.prioridad, i.observacion||"", i.estado, i.responsabilidad||"", i.obs_resolucion||"", (i.materiales||"").replace(/\n/g, " | "), parseFotos(i).map(f=>f.url).join(" | ")]);
   const csv = [headers, ...rows].map(r =>
     r.map(v => `"${String(v??"").replace(/"/g,'""')}"`).join(",")
   ).join("\n");
