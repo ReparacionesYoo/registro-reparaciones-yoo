@@ -314,6 +314,11 @@
       <input type="text" id="fObs" placeholder="Ej: El propietario está en el edificio ahora">
     </div>
 
+    <div class="field">
+      <label>Foto (opcional)</label>
+      <input type="file" id="fFotoNueva" accept="image/*" capture="environment">
+    </div>
+
     <div class="field" id="editQuienWrap" style="display:none;">
       <label>¿Quién realiza esta corrección?</label>
       <select id="fEditQuien">
@@ -1038,6 +1043,7 @@ function openForm(item){
   document.getElementById("fReportante").value = editingItem ? editingItem.reportante : "";
   document.getElementById("fDesc").value = editingItem ? editingItem.descripcion : "";
   document.getElementById("fObs").value = editingItem ? (editingItem.observacion || "") : "";
+  document.getElementById("fFotoNueva").value = "";
   selectedPrio = editingItem ? editingItem.prioridad : "Media";
   document.querySelectorAll(".prio-picker#prioPicker .prio-btn").forEach(b=>b.classList.toggle("active", b.getAttribute("data-v")===selectedPrio));
   document.getElementById("editQuienWrap").style.display = editingItem ? "block" : "none";
@@ -1086,6 +1092,15 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
       await saveItem(updated);
       const idx = items.findIndex(i=>String(i.id)===String(updated.id));
       if(idx > -1) items[idx] = updated;
+      const fotoFile = document.getElementById("fFotoNueva").files[0];
+      if(fotoFile){
+        try{
+          updated.fotos = await subirFoto(updated, fotoFile, quienEdita);
+          if(idx > -1) items[idx] = updated;
+        }catch(errFoto){
+          console.error(errFoto);
+        }
+      }
       render();
       closeForm();
       showToast(`Solicitud actualizada`);
@@ -1110,6 +1125,14 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
   try{
     await saveItem(item);
     items.unshift(item);
+    const fotoFile = document.getElementById("fFotoNueva").files[0];
+    if(fotoFile){
+      try{
+        item.fotos = await subirFoto(item, fotoFile, reportante);
+      }catch(errFoto){
+        console.error(errFoto);
+      }
+    }
     render();
     closeForm();
     showToast(`Solicitud guardada`);
